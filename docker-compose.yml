@@ -6,11 +6,16 @@ services:
     ports:
       - '3000:3000'
     volumes:
-      - ./src:/usr/src/app/src
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
     env_file:
       - .env
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    command: ['sh', '-c', 'pnpm prisma migrate deploy && pnpm run start:dev']
+    networks:
+      - app_network
 
   db:
     image: postgres:16
@@ -24,6 +29,17 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app_network
 
 volumes:
   postgres_data:
+
+networks:
+  app_network:
+    driver: bridge
