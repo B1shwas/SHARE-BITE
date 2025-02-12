@@ -1,4 +1,4 @@
-import { format, transports, createLogger, LoggerOptions } from 'winston';
+import { format, transports, LoggerOptions } from 'winston';
 import 'winston-daily-rotate-file';
 import { utilities as nestWinstonModuleUtilities } from 'nest-winston';
 import { winstonLoggerFormat } from './logger.format';
