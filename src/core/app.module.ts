@@ -1,6 +1,4 @@
 import { AuthModule } from './../modules/auth/auth.module';
-import { AuthService } from './../modules/auth/auth.service';
-import { AuthController } from './../modules/auth/auth.controller';
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { HttpLoggerMiddleware } from 'common/middlewares';
 

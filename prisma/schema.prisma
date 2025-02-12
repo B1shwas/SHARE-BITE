@@ -14,7 +14,8 @@ model User {
   password  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  tokens Token[]
+  role      ROLE
+  tokens    Token[]
 }
 
 model Token {
@@ -24,4 +25,11 @@ model Token {
   token     String
   createdAt DateTime @default(now())
   expiresAt DateTime
+}
+
+enum ROLE {
+  ADMIN
+  VOLUNTEER
+  DONOR
+  RECEIVER
 }
