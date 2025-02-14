@@ -1,10 +1,11 @@
-import { AuthModule } from './../modules/auth/auth.module';
+import { UserModule } from '../modules/user/user.module';
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { CommonModule } from 'common/common.module';
 import { HttpLoggerMiddleware } from 'common/middlewares';
+import { AuthModule } from 'modules/auth/auth.module';
 
 @Module({
-  imports: [AuthModule, CommonModule],
+  imports: [UserModule, CommonModule, AuthModule],
   controllers: [],
   providers: [],
 })

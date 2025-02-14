@@ -1,44 +1,120 @@
 import {
-  BadRequestException,
+  ForbiddenException,
   Injectable,
-  InternalServerErrorException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService } from 'database/prisma.service';
-import { CreateUserDto } from './dto';
+import { LoginUserDto } from './dto';
 import * as bcrypt from 'bcryptjs';
-import { ROLE } from '@prisma/client';
+import { User } from '@prisma/client';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+import { AppLogger } from 'modules/logger/logger.service';
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
+    private readonly logger: AppLogger,
+  ) {}
 
-  async signin(data: CreateUserDto) {
-    const duplicate = await this.prisma.user.findUnique({
+  async validateUser(data: LoginUserDto): Promise<User> {
+    this.logger.log('Checking user credentials');
+    const user = await this.prisma.user.findUnique({
       where: {
         email: data.email,
       },
     });
 
-    if (duplicate) {
-      throw new BadRequestException('User already exists');
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
     }
 
-    if (data.role === ROLE.ADMIN) {
-      throw new BadRequestException('Admins must be created by a superadmin');
+    const valid = await bcrypt.compare(data.password, user.password);
+    if (!valid) {
+      throw new UnauthorizedException('Invalid credentials');
     }
 
-    let hashedPassword: string;
-    hashedPassword = await bcrypt.hash(data.password, 10);
+    this.logger.log('User validated');
 
-    try {
-      return await this.prisma.user.create({
-        data: {
-          ...data,
-          password: hashedPassword,
-        },
-      });
-    } catch (error) {
-      throw new InternalServerErrorException('Failed to create user');
+    return user;
+  }
+
+  async generateTokens(userId: string) {
+    const accessToken = this.jwtService.sign(
+      { sub: userId },
+      { secret: this.configService.get<string>('ACCESS_TOKEN_SECRET') },
+    );
+    const refreshToken = this.jwtService.sign(
+      { sub: userId },
+      {
+        secret: this.configService.get<string>('REFRESH_TOKEN_SECRET'),
+        expiresIn: '7d',
+      },
+    );
+    return { accessToken, refreshToken };
+  }
+
+  async login(userId: string, email: string) {
+    this.logger.log('Generating tokens');
+    const tokens = await this.generateTokens(userId);
+
+    this.logger.log('Token generated');
+    this.logger.log(tokens.accessToken);
+
+    const hashedRefreshToken = await bcrypt.hash(tokens.refreshToken, 10);
+
+    await this.prisma.token.create({
+      data: {
+        userId,
+        token: hashedRefreshToken,
+        expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
+      },
+    });
+
+    return tokens;
+  }
+
+  async refresh(userId: string, oldRt: string) {
+    const rts = await this.prisma.token.findMany({
+      where: {
+        userId,
+        expiresAt: { gte: new Date() },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!rts.length) {
+      throw new UnauthorizedException();
     }
+
+    const validToken = await Promise.all(
+      rts.map(async (token) => ({
+        isValid: await bcrypt.compare(oldRt, token.token),
+        token,
+      })),
+    ).then((results) => results.find((res) => res.isValid)?.token);
+
+    if (!validToken) {
+      await this.prisma.token.deleteMany({ where: { userId } });
+      throw new ForbiddenException(
+        'Refresh token reuse detected. All sessions revoked ',
+      );
+    }
+
+    const tokens = await this.generateTokens(userId);
+
+    const hashedRefreshToken = await bcrypt.hash(tokens.refreshToken, 10);
+    await this.prisma.token.create({
+      data: {
+        userId,
+        token: hashedRefreshToken,
+        expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
+      },
+    });
+
+    return tokens;
   }
 }

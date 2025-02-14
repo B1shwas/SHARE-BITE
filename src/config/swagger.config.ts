@@ -5,4 +5,5 @@ export const swaggerConfig = new DocumentBuilder()
   .setDescription('API Documentation for SHAREBITE')
   .setVersion('1.0')
   .addBearerAuth()
+  .addCookieAuth('refreshToken')
   .build();
