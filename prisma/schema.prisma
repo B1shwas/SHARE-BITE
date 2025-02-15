@@ -23,6 +23,7 @@ model Token {
   userId    String
   user      User     @relation(fields: [userId], references: [id])
   token     String
+  isValid   Boolean  @default(true)
   createdAt DateTime @default(now())
   expiresAt DateTime
 }

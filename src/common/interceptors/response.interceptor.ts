@@ -8,7 +8,8 @@ import { Observable, map } from 'rxjs';
 
 export type ResponseFormat<T> = {
   success: boolean;
-  data: T;
+  message?: string;
+  data?: T;
   timestamp: string;
 };
 
@@ -21,11 +22,23 @@ export class ResponseInterceptor<T>
     next: CallHandler<T>,
   ): Observable<ResponseFormat<T>> {
     return next.handle().pipe(
-      map((data) => ({
-        success: true,
-        data,
-        timestamp: new Date().toISOString(),
-      })),
+      map((response) => {
+        const responseObj: ResponseFormat<T> = {
+          success: true,
+          timestamp: new Date().toISOString(),
+        };
+
+        if (response && typeof response === 'object') {
+          if ('data' in response)
+            responseObj.data = (response as { data: T }).data;
+          if ('message' in response)
+            responseObj.message = (response as { message: string }).message;
+        } else {
+          responseObj.data = response as T;
+        }
+
+        return responseObj;
+      }),
     );
   }
 }

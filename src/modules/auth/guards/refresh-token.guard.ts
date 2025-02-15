@@ -14,7 +14,7 @@ export class RefreshTokenGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<Request>();
 
     const refreshToken = request?.cookies?.refreshToken;
-    console.log(refreshToken);
+
     if (!refreshToken) {
       return false;
     }
@@ -22,7 +22,6 @@ export class RefreshTokenGuard implements CanActivate {
     try {
       const secret = this.configService.get<string>('REFRESH_TOKEN_SECRET');
       const decoded = this.jwtService.verify(refreshToken, { secret });
-      console.log(secret, decoded);
 
       request['user'] = decoded;
       return true;

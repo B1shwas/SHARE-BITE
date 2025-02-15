@@ -9,6 +9,7 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
   @Post('/signin')
   signin(@Body() data: CreateUserDto) {
-    return this.userService.signin(data);
+    const user = this.userService.signin(data);
+    return { data: user };
   }
 }
