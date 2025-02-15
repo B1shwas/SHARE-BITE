@@ -1,11 +1,16 @@
-import { AuthModule } from './../modules/auth/auth.module';
-import { AuthService } from './../modules/auth/auth.service';
-import { AuthController } from './../modules/auth/auth.controller';
-import { Module } from '@nestjs/common';
+import { UserModule } from '../modules/user/user.module';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { CommonModule } from 'common/common.module';
+import { HttpLoggerMiddleware } from 'common/middlewares';
+import { AuthModule } from 'modules/auth/auth.module';
 
 @Module({
-  imports: [AuthModule],
-  controllers: [AuthController],
-  providers: [AuthService],
+  imports: [UserModule, CommonModule, AuthModule],
+  controllers: [],
+  providers: [],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(HttpLoggerMiddleware).forRoutes('*');
+  }
+}
