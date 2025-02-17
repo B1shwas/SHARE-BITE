@@ -8,14 +8,17 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  password  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  role      ROLE
-  tokens    Token[]
+  id           String        @id @default(cuid())
+  name         String
+  email        String        @unique
+  password     String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  role         ROLE
+  usertype     USER_TYPE     @default(ORGANIZATION)
+  tokens       Token[]
+  Individual   Individual?
+  Organization Organization?
 }
 
 model Token {
@@ -26,6 +29,143 @@ model Token {
   isValid   Boolean  @default(true)
   createdAt DateTime @default(now())
   expiresAt DateTime
+  updatedAt DateTime @updatedAt
+}
+
+model Individual {
+  id        String    @id @map("user_id")
+  user      User      @relation(fields: [id], references: [id])
+  address   String
+  contact   String
+  bio       String?
+  profile   String?
+  gender    GENDER?
+  dob       DateTime?
+  Social    Social[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  Donor     Donor?
+  Receiver  Receiver?
+}
+
+model Organization {
+  id        String    @id @map("user_id")
+  user      User      @relation(fields: [id], references: [id])
+  name      String    @unique
+  address   String
+  contact   String
+  bio       String?
+  profile   String?
+  website   String?
+  foundedAt DateTime?
+  isNgo     Boolean
+  verified  Boolean
+  socials   Social[]
+  donor     Donor?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  Receiver  Receiver?
+}
+
+model Social {
+  id           String        @id @default(cuid())
+  orgId        String?
+  individualId String?
+  organization Organization? @relation(fields: [orgId], references: [id])
+  individual   Individual?   @relation(fields: [individualId], references: [id])
+  platform     SOCIAL_HANDLE
+  link         String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model Donor {
+  id            String          @id @default(cuid())
+  orgId         String          @unique
+  organization  Organization?   @relation(fields: [orgId], references: [id])
+  individualId  String          @unique
+  individual    Individual?     @relation(fields: [individualId], references: [id])
+  maxStorage    Int?
+  preferredFood FOOD_CATEGORY[]
+  DonationPost  DonationPost[]
+}
+
+model Receiver {
+  id              String            @id @default(cuid())
+  orgId           String            @unique
+  organization    Organization?     @relation(fields: [orgId], references: [id])
+  individualId    String            @unique
+  individual      Individual?       @relation(fields: [individualId], references: [id])
+  preferredFood   FOOD_CATEGORY[]
+  hasFrozenStore  Boolean
+  receivingHours  Json
+  DonationRequest DonationRequest[]
+}
+
+model DonationPost {
+  id              String               @id @default(cuid())
+  donorId         String
+  donor           Donor                @relation(fields: [donorId], references: [id])
+  title           String
+  description     String
+  photos          String[]
+  pickupLocation  String?
+  expiryDate      DateTime
+  urgentPickup    Boolean?
+  status          DONATION_POST_STATUS @default(PENDING)
+  DonationRequest DonationRequest[]
+}
+
+model DonationRequest {
+  id         String                  @id @default(cuid())
+  donationId String
+  donation   DonationPost            @relation(fields: [donationId], references: [id])
+  receiverId String
+  receiver   Receiver                @relation(fields: [receiverId], references: [id])
+  status     DONATION_REQUEST_STATUS @default(PENDING)
+}
+
+enum DONATION_POST_STATUS {
+  PENDING
+  RESERVED
+  COMPLETED
+  EXPIRED
+  SCHEDULED
+}
+
+enum DONATION_REQUEST_STATUS {
+  ACCEPTED
+  REJECTED
+  CANCELLED
+  PENDING
+}
+
+enum FOOD_CATEGORY {
+  GRAINS_AND_CEREALS
+  FRUITS_AND_VEGETABLES
+  DAIRY_PRODUCTS
+  MEAT_AND_POULTRY
+  CANNED_AND_PACKAGED
+  BEVERAGES
+  SNACKS_AND_SWEETS
+  BABY_FOOD
+  BAKED_GOODS
+  PLANT_BASED
+  COOKED_MEALS
+  OTHER
+}
+
+enum SOCIAL_HANDLE {
+  FACEBOOK
+  INSTAGRAM
+  TWITTER
+  LINKEDIN
+  MEDIUM
+}
+
+enum USER_TYPE {
+  INDIVIDUAL
+  ORGANIZATION
 }
 
 enum ROLE {
@@ -33,4 +173,10 @@ enum ROLE {
   VOLUNTEER
   DONOR
   RECEIVER
+}
+
+enum GENDER {
+  MALE
+  FEMALE
+  OTHER
 }
