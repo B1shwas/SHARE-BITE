@@ -15,10 +15,12 @@ model User {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   role         ROLE
-  usertype     USER_TYPE     @default(ORGANIZATION)
   tokens       Token[]
-  Individual   Individual?
-  Organization Organization?
+  individual   Individual?
+  organization Organization?
+  receiver     Receiver?
+  donor        Donor?
+  Social       Social[]
 }
 
 model Token {
@@ -41,65 +43,56 @@ model Individual {
   profile   String?
   gender    GENDER?
   dob       DateTime?
-  Social    Social[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
-  Donor     Donor?
-  Receiver  Receiver?
+  Donor     Donor?    @relation(fields: [donorId], references: [id])
+  donorId   String?
 }
 
 model Organization {
-  id        String    @id @map("user_id")
-  user      User      @relation(fields: [id], references: [id])
-  name      String    @unique
-  address   String
-  contact   String
-  bio       String?
-  profile   String?
-  website   String?
-  foundedAt DateTime?
-  isNgo     Boolean
-  verified  Boolean
-  socials   Social[]
-  donor     Donor?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  Receiver  Receiver?
+  id         String    @id @map("user_id")
+  user       User      @relation(fields: [id], references: [id])
+  name       String    @unique
+  address    String
+  contact    String
+  bio        String?
+  profile    String?
+  website    String?
+  foundedAt  DateTime?
+  isNgo      Boolean
+  isVerified Boolean
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 }
 
 model Social {
-  id           String        @id @default(cuid())
-  orgId        String?
-  individualId String?
-  organization Organization? @relation(fields: [orgId], references: [id])
-  individual   Individual?   @relation(fields: [individualId], references: [id])
-  platform     SOCIAL_HANDLE
-  link         String
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  id        String        @id @default(cuid())
+  userId    String
+  user      User          @relation(fields: [userId], references: [id])
+  platform  SOCIAL_HANDLE
+  link      String
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
 }
 
 model Donor {
   id            String          @id @default(cuid())
-  orgId         String          @unique
-  organization  Organization?   @relation(fields: [orgId], references: [id])
-  individualId  String          @unique
-  individual    Individual?     @relation(fields: [individualId], references: [id])
+  userId        String?         @unique
+  user          User?           @relation(fields: [userId], references: [id])
   maxStorage    Int?
   preferredFood FOOD_CATEGORY[]
-  DonationPost  DonationPost[]
+  donations     DonationPost[]
+  individual    Individual[]
 }
 
 model Receiver {
-  id              String            @id @default(cuid())
-  orgId           String            @unique
-  organization    Organization?     @relation(fields: [orgId], references: [id])
-  individualId    String            @unique
-  individual      Individual?       @relation(fields: [individualId], references: [id])
-  preferredFood   FOOD_CATEGORY[]
-  hasFrozenStore  Boolean
-  receivingHours  Json
-  DonationRequest DonationRequest[]
+  id             String            @id @default(cuid())
+  userId         String            @unique
+  user           User              @relation(fields: [userId], references: [id])
+  preferredFood  FOOD_CATEGORY[]
+  hasFrozenStore Boolean
+  receivingHours Json
+  requests       DonationRequest[]
 }
 
 model DonationPost {
@@ -111,7 +104,7 @@ model DonationPost {
   photos          String[]
   pickupLocation  String?
   expiryDate      DateTime
-  urgentPickup    Boolean?
+  urgentPickup    Boolean?             @default(false)
   status          DONATION_POST_STATUS @default(PENDING)
   DonationRequest DonationRequest[]
 }
@@ -161,11 +154,6 @@ enum SOCIAL_HANDLE {
   TWITTER
   LINKEDIN
   MEDIUM
-}
-
-enum USER_TYPE {
-  INDIVIDUAL
-  ORGANIZATION
 }
 
 enum ROLE {
